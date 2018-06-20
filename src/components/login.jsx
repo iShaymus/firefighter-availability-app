@@ -8,6 +8,8 @@ class Login extends React.Component {
   }
 
   submitLogin() {
+    // Gets username and password values from the login for imputs and 
+    // passess them to the parent App.js function loginWithEmail
     let username = document.getElementById('id_username').value;
     let password = document.getElementById('id_password').value;
     this.props.login(username, password);
@@ -39,6 +41,8 @@ class Login extends React.Component {
   }
 }
 
+// Renders a bootstrap alert with a text value from parent App.js state loginAlertMessage
+// Set visible by parent state App.js loginaAlertVisible
 class LoginError extends React.Component {
   render() {
     if (this.props.visible){
