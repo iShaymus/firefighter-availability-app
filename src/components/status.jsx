@@ -2,6 +2,7 @@ import React, { Component } from 'react';
 import {db} from '../firebase';
 import Modal from 'react-bootstrap4-modal';
 
+// Used for sorting DB queries by firefighter rank
 const ranks = {
   CFO: 1,
   DCFO: 2,
@@ -33,7 +34,14 @@ class Status extends Component {
   };
 
   componentDidMount() {
+    // live is set to false when the user logs out to stop the DB snapshot
+    // from continuing to try and execute which results in Firebase errors due to 
+    // there being no current authenticated user.
     if (this.props.live) {
+
+      // Continuously monitors the firefighters collection on Firebase Firestore
+      // If any attribute changes for any firefighter then the DB updates the 
+      // firefighters state with a new copy of data from the Firestore DB.
       db.collection('firefighters').onSnapshot( (snap) => {
         let temp = [];
         let av = 0;
@@ -44,6 +52,8 @@ class Status extends Component {
           let data = doc.data();
           data.id = doc.id;
           temp.push(data);
+
+          // Counts the number of each status of firefigter
           switch(doc.data().status) {
             case 'Available':
               av++;
@@ -62,6 +72,7 @@ class Status extends Component {
           }
         });
 
+        // Sorts the DB query by Ranks specified in the ranks const
         let sortedFirefighters = temp.sort(this.compareRank);
 
         this.setState({
@@ -75,24 +86,34 @@ class Status extends Component {
         console.log('Stopped listening for live status updates.  User has logged out.');
       });
     } else {
+      // If user has logged out stop monitoring Firestore for data changes.
       db.collection('firefighters').onSnapshot(() => {});
     }
   }
 
   compareRank( left, right ){
+    // Compares ranks from DB object to assist in sorting from highest to lowest rank.
     return ranks[left.rank] - ranks[right.rank]
   }
 
   showModal(e) {
+    // Gets the ID from the id= html tag of the clicked table row or other DOM element.  
+    // Searches for the ID in the firefighters array that contains all firefighters from the initial
+    // DB pull.  Takes the object from the found firefighter at sets it's object at the selectedFirefighter state.
+    // Then displays a bootstrap modal by changing modalVisible to true.  Modal is then used to change current status.
     this.setState({selectedFirefighter: this.state.firefighters.find(x => x.id === e.currentTarget.id)});
     this.setState({modalVisible: true});
   }
 
   hideModal() {
+    // Hides the bootstrap modal by changing the modalVisible state
+    // sets the selectedFirefighter object back to empty.
     this.setState({modalVisible: false, selectedFirefighter:{} });
   }
 
   setStatus(status) {
+    // ID is obtained when a table row is clicked.  Document for the specified ID
+    // is found from Firestore and updated with the status from the status argument
     db.collection("firefighters").doc(this.state.selectedFirefighter.id).set({
       status: status
     }, { merge:true })
@@ -109,7 +130,7 @@ class Status extends Component {
           <div className="col-lg">
             <h3 className="text-center pt-3">Available - {this.state.available + this.state.onduty}</h3>
             <hr />
-            <table className="table table-striped table-hover table-sm">
+            <table className="table table-striped table-hover ">
               <thead className="thead-dark">
                 <tr>
                   <th scope="col" className="text-center">Rank</th>
@@ -151,7 +172,7 @@ class Status extends Component {
           <div className="col-lg">
             <h3 className="text-center pt-3">Unavailable - {this.state.unavailable}</h3>
             <hr />
-            <table className="table table-striped table-hover table-sm">
+            <table className="table table-striped table-hover ">
                 <thead className="thead-dark">
                   <tr>
                     <th scope="col" className="text-center">Rank</th>
@@ -180,7 +201,7 @@ class Status extends Component {
           <div className="col-lg">
             <h3 className="text-center pt-3">Leave - {this.state.leave}</h3>
             <hr />
-            <table className="table table-striped table-hover table-sm">
+            <table className="table table-striped table-hover ">
                 <thead className="thead-dark">
                   <tr>
                     <th scope="col" className="text-center">Rank</th>
@@ -206,7 +227,7 @@ class Status extends Component {
             </table>
           </div>
         </div>
-
+        
         <div className="static-modal">
           <Modal visible={this.state.modalVisible} onClickBackdrop={this.hideModal}>
             <div className="modal-header bg-dark">
