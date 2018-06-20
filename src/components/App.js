@@ -21,6 +21,7 @@ class App extends Component {
   }
 
   componentDidMount() {
+    // Monitors the authentication state, if it changes the authUser state is chnaged
     auth.onAuthStateChanged((authUser) => {
       if (authUser) {
         this.setState({ authUser});
@@ -29,15 +30,25 @@ class App extends Component {
   }
 
   logoutCurrentUser() {
+    // liveUpdate false stops the Child Status.jsx from monitoring Firestore for
+    // live data changes
     this.setState({liveUpdate: false});
+
+    // Sign the user out and set authUser to a non truthy value.
     auth.signOut().then(() => {
       this.setState({authUser: false});
     });
   }
 
   loginWithEmail(email, password) {
+    // Log the provided creds in with Firebase Auth email.
     auth.signInWithEmailAndPassword(email, password)
       .then(() => {
+        // Firebase Auth does not currently have the ability to create a display name for an
+        // email user when created through the Firebase Console.  If the user does not have a 
+        // display name then search for their email in the 'firefighters' collection and set the
+        // display name to firstName + lastName.  Would cause problems if two users had the same email.
+        // Requires an email field to be added to each firefighter with their intended email address for login
         if (!auth.currentUser.displayName) {
           // No display name saved for user
           db.collection('firefighters').where('email', '==', email)
@@ -45,17 +56,21 @@ class App extends Component {
             .then((snap) => {
               snap.forEach((doc) => {
                 auth.currentUser.updateProfile({displayName: `${doc.data().firstName} ${doc.data().lastName}`}).then(() => {
+                  // Force component to refresh to displayed changed displayName
                   this.forceUpdate();
                 })
               })
             }).catch(() => {
-              // User not found in firefighters collection
+              // Somehow a user has created an account and logged in without us adding their email to the 
+              // 'firefighters' DB collection.  This shouldn't happen so log them out!
               this.logoutCurrentUser();
             })
         }
+        // All is well log then in, start live query to DB and hide any previous login errors
         this.setState({authUser: true, loginAlertVisible: false, loginAlertMessage: '', liveUpdate: true});
       })
       .catch(() => {
+        // Username or password are incorrect, show bootstrap alert from Child Login.jsx
         this.setState({loginAlertVisible: true, loginAlertMessage: 'Invalid email or password'})
       })
     }
