@@ -17,10 +17,10 @@ class Login extends React.Component {
   
   render() {
     return (
-      <div className="container">
+      <div className="container bg-white content-container">
         <div className="row align-items-center justify-content-center">
           <div className="col-12 col-sm-9 col-md-7 col-lg-5">
-            <div className="card shadow mt-4">
+            <div className="card">
               <div className="text-center" style={{backgroundColor: 'rgb(22, 16, 92)'}}>
                 <img id="fenz-logo" src={fenz} alt=""/>
               </div>

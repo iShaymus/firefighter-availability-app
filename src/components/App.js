@@ -2,21 +2,44 @@ import React, { Component } from 'react';
 import { BrowserRouter as Router, Route, Redirect } from 'react-router-dom';
 import Status from './status';
 import Login from './login';
-import Admin from './admin';
+import Admin from './admin/admin';
 import Home from './home';
+import Members from './members';
+import Contact from './contact';
+import FireSafety from './firesafety';
 import Navigation from './navigation';
+import Photos from './gallery';
 import { db, auth } from '../firebase';
+
+// Used for sorting DB queries by firefighter rank
+const ranks = {
+  CFO: 1,
+  DCFO: 2,
+  SSO: 3,
+  SO: 4,
+  SFF: 5,
+  QFF: 6,
+  FF: 7,
+  RFF: 8,
+  OS: 9
+}
 
 class App extends Component {
   constructor(props) {
     super(props);
     this.loginWithEmail = this.loginWithEmail.bind(this);
     this.logoutCurrentUser = this.logoutCurrentUser.bind(this);
+    this.compareRank = this.compareRank.bind(this);
+    this.getFullRank = this.getFullRank.bind(this);
     this.state = {
       authUser: false,
       loginAlertVisible: false,
       loginAlertMessage: "",
-      liveUpdate: true
+      firefighters: [],
+      available: 0,
+      onduty: 0,
+      unavailable: 0,
+      leave: 0,
     };
   }
 
@@ -27,6 +50,57 @@ class App extends Component {
         this.setState({ authUser});
       } 
     });
+    // Continuously monitors the firefighters collection on Firebase Firestore
+    // If any attribute changes for any firefighter then the DB updates the 
+    // firefighters state with a new copy of data from the Firestore DB.
+    db.collection('firefighters').onSnapshot( (snap) => {
+      let temp = [];
+      let av = 0;
+      let od = 0;
+      let un = 0;
+      let lv = 0;
+      snap.forEach( (doc) => {
+        let data = doc.data();
+        data.id = doc.id;
+        if(this.getFullRank(doc.data().rank)) {data.fullRank = this.getFullRank(doc.data().rank)}
+        temp.push(data);
+        // Counts the number of each status of firefigter
+        switch(doc.data().status) {
+          case 'Available':
+            av++;
+            break;
+          case 'On Duty':
+            od++;
+            break;
+          case 'Unavailable':
+            un++;
+            break;
+          case 'Leave':
+            lv++;
+            break;
+          default:
+            break;
+        }
+      });
+
+      // Sorts the DB query by Ranks specified in the ranks const
+      let sortedFirefighters = temp.sort(this.compareRank);
+
+      this.setState({
+        firefighters: sortedFirefighters,
+        available: av,
+        onduty: od,
+        unavailable: un,
+        leave: lv
+      })
+    }, function(error) {
+      console.log('Stopped listening for live status updates.  User has logged out.');
+    });
+  }
+
+  compareRank( left, right ){
+    // Compares ranks from DB object to assist in sorting from highest to lowest rank.
+    return ranks[left.rank] - ranks[right.rank]
   }
 
   logoutCurrentUser() {
@@ -75,19 +149,44 @@ class App extends Component {
       })
     }
   
+  getFullRank(rank) {
+    switch(rank) {
+      case 'CFO':
+        return 'Chief Fire Officer';
+      case 'DCFO':
+        return 'Deputy Chief Fire Officer';
+      case 'SSO':
+        return 'Senior Station Officer';
+      case 'SO':
+        return 'Station Officer';
+      case 'SFF':
+        return 'Senior Firefighter';
+      case 'QFF':
+        return 'Qualified Firefighter';
+      case 'FF':
+        return 'Firefighter';
+      case 'RFF':
+        return 'Recruit Firefighter';
+      case 'OS':
+        return 'Operational Support';
+      default:
+        return null
+    }
+  }
+  
   render() {
     return (
       <Router>
-        <div className="App">
+        <div className="App bg-secondary">
           <Navigation user={this.state.authUser} logout={this.logoutCurrentUser}/>
           <div className="text-center">
           <Route path='/' exact component={Home} />
-          <Route path='/gallery' exact render={() => { return (<h1>Brigade Photos</h1>)}}/>
-          <Route path='/members' exact render={() => { return (<h1>Members</h1>)}}/>
-          <Route path='/firesafety' exact render={() => { return (<h1>Smoke Alarms</h1>)}}/>
-          <Route path='/contact' exact render={() => { return (<h1>Contact</h1>)}}/>
-          <Route path='/status' exact render={() => this.state.authUser ? <Status user={this.state.authUser} live={this.state.liveUpdate}/> : <Redirect to='/auth'/>}/>
-          <Route path='/admin' exact render={() => this.state.authUser ? <Admin/> : <Redirect to='/auth'/>}/>
+          <Route path='/gallery' exact render={() => <Photos /> }/>
+          <Route path='/members' exact render={() => <Members firefighters={this.state.firefighters} /> }/>
+          <Route path='/firesafety' exact render={() => <FireSafety /> }/>
+          <Route path='/contact' exact render={() => <Contact /> }/>
+          <Route path='/status' exact render={() => this.state.authUser ? <Status firefighters={this.state.firefighters} av={this.state.available} od={this.state.onduty} un={this.state.unavailable} lv={this.state.leave}/> : <Redirect to='/auth'/>}/>
+          <Route path='/admin' exact render={() => this.state.authUser ? <Admin firefighters={this.state.firefighters}/> : <Redirect to='/auth'/>}/>
           <Route path='/auth' exact render={() => this.state.authUser ? <Redirect to='/status'/> : <Login login={this.loginWithEmail} error={this.state.loginAlertVisible} errorMessage={this.state.loginAlertMessage} /> } />
           </div>
         </div>

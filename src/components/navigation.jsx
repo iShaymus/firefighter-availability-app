@@ -12,7 +12,8 @@ class Navigation extends Component {
 
   render() {
     return (
-      <nav className="navbar navbar-expand-md navbar-dark bg-dark">
+      <div>
+      <nav className="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
         <div className="container-fluid">
           <div className="mx-auto order-0">
             <img id="logo" src={logo} alt=""/>
@@ -56,6 +57,17 @@ class Navigation extends Component {
           </div>
         </div>
       </nav>
+
+      <nav className="navbar navbar-expand-md navbar-dark bg-dark fixed-bottom">
+        <div className="container p-0">
+          <div className="mx-auto order-0">
+            {/*<button className="btn btn-danger"><i className="fas fa-fire"></i> Clutha District - Full Fire Ban</button>
+            <button className="btn btn-warning"><i className="fas fa-exclamation-triangle"></i> Clutha District - Permit required for all open fires</button>*/}
+            <button className="btn btn-success"><i className="fas fa-check"></i> Clutha District - No Permit Required</button>
+          </div>
+        </div>
+      </nav>
+      </div>
     );
   }
 }

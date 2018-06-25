@@ -2,106 +2,24 @@ import React, { Component } from 'react';
 import {db} from '../firebase';
 import Modal from 'react-bootstrap4-modal';
 
-// Used for sorting DB queries by firefighter rank
-const ranks = {
-  CFO: 1,
-  DCFO: 2,
-  SSO: 3,
-  SO: 4,
-  SFF: 5,
-  QFF: 6,
-  FF: 7,
-  RFF: 8,
-  OS: 9
-}
-
 class Status extends Component {
   constructor() {
     super();
     this.state = {
-      firefighters: [],
-      available: 0,
-      onduty: 0,
-      unavailable: 0,
-      leave: 0,
       modalVisible: false,
       selectedFirefighter: {}
     }
     this.showModal = this.showModal.bind(this);
     this.hideModal = this.hideModal.bind(this);
     this.setStatus = this.setStatus.bind(this);
-    this.compareRank = this.compareRank.bind(this);
   };
-
-  componentDidMount() {
-    // live is set to false when the user logs out to stop the DB snapshot
-    // from continuing to try and execute which results in Firebase errors due to 
-    // there being no current authenticated user.
-    if (this.props.live) {
-
-      // Continuously monitors the firefighters collection on Firebase Firestore
-      // If any attribute changes for any firefighter then the DB updates the 
-      // firefighters state with a new copy of data from the Firestore DB.
-      db.collection('firefighters').onSnapshot( (snap) => {
-        let temp = [];
-        let av = 0;
-        let od = 0;
-        let un = 0;
-        let lv = 0;
-        snap.forEach( (doc) => {
-          let data = doc.data();
-          data.id = doc.id;
-          temp.push(data);
-
-          // Counts the number of each status of firefigter
-          switch(doc.data().status) {
-            case 'Available':
-              av++;
-              break;
-            case 'On Duty':
-              od++;
-              break;
-            case 'Unavailable':
-              un++;
-              break;
-            case 'Leave':
-              lv++;
-              break;
-            default:
-              break;
-          }
-        });
-
-        // Sorts the DB query by Ranks specified in the ranks const
-        let sortedFirefighters = temp.sort(this.compareRank);
-
-        this.setState({
-          firefighters: sortedFirefighters,
-          available: av,
-          onduty: od,
-          unavailable: un,
-          leave: lv
-        })
-      }, function(error) {
-        console.log('Stopped listening for live status updates.  User has logged out.');
-      });
-    } else {
-      // If user has logged out stop monitoring Firestore for data changes.
-      db.collection('firefighters').onSnapshot(() => {});
-    }
-  }
-
-  compareRank( left, right ){
-    // Compares ranks from DB object to assist in sorting from highest to lowest rank.
-    return ranks[left.rank] - ranks[right.rank]
-  }
 
   showModal(e) {
     // Gets the ID from the id= html tag of the clicked table row or other DOM element.  
     // Searches for the ID in the firefighters array that contains all firefighters from the initial
     // DB pull.  Takes the object from the found firefighter at sets it's object at the selectedFirefighter state.
     // Then displays a bootstrap modal by changing modalVisible to true.  Modal is then used to change current status.
-    this.setState({selectedFirefighter: this.state.firefighters.find(x => x.id === e.currentTarget.id)});
+    this.setState({selectedFirefighter: this.props.firefighters.find(x => x.id === e.currentTarget.id)});
     this.setState({modalVisible: true});
   }
 
@@ -125,10 +43,10 @@ class Status extends Component {
   
   render() {
     return (
-      <div className="container-fluid">
+      <div className="container-fluid bg-white content-container">
         <div className="row">
           <div className="col-lg">
-            <h3 className="text-center pt-3">Available - {this.state.available + this.state.onduty}</h3>
+            <h3 className="text-center pt-3">Available - {this.props.av + this.props.od}</h3>
             <hr />
             <table className="table table-striped table-hover ">
               <thead className="thead-dark">
@@ -139,7 +57,7 @@ class Status extends Component {
                 </tr>
               </thead>
               <tbody className="table-striped">
-                {this.state.firefighters.map( (firefighter) => {
+                {this.props.firefighters.map( (firefighter) => {
                   if(firefighter.status === 'On Duty') {
                     return (
                       <tr className="table-success" key={firefighter.id} id={firefighter.id} onClick={ (e) => {this.showModal(e)}}>
@@ -152,7 +70,7 @@ class Status extends Component {
                   return null;
                 })
                 }
-                {this.state.firefighters.map( (firefighter) => {
+                {this.props.firefighters.map( (firefighter) => {
                   if(firefighter.status === 'Available') {
                     return (
                       <tr key={firefighter.id} id={firefighter.id} onClick={ (e) => {this.showModal(e)}}>
@@ -170,7 +88,7 @@ class Status extends Component {
           </div>
           <br />
           <div className="col-lg">
-            <h3 className="text-center pt-3">Unavailable - {this.state.unavailable}</h3>
+            <h3 className="text-center pt-3">Unavailable - {this.props.un}</h3>
             <hr />
             <table className="table table-striped table-hover ">
                 <thead className="thead-dark">
@@ -181,7 +99,7 @@ class Status extends Component {
                   </tr>
                 </thead>
                 <tbody className="table-striped">
-                  {this.state.firefighters.map( (firefighter) => {
+                  {this.props.firefighters.map( (firefighter) => {
                     if(firefighter.status === 'Unavailable') {
                       return (
                         <tr key={firefighter.id} id={firefighter.id} onClick={ (e) => {this.showModal(e)}}>
@@ -199,7 +117,7 @@ class Status extends Component {
           </div>
           <br />
           <div className="col-lg">
-            <h3 className="text-center pt-3">Leave - {this.state.leave}</h3>
+            <h3 className="text-center pt-3">Leave - {this.props.lv}</h3>
             <hr />
             <table className="table table-striped table-hover ">
                 <thead className="thead-dark">
@@ -210,7 +128,7 @@ class Status extends Component {
                   </tr>
                 </thead>
                 <tbody className="table-striped">
-                  {this.state.firefighters.map( (firefighter) => {
+                  {this.props.firefighters.map( (firefighter) => {
                     if(firefighter.status === 'Leave') {
                       return (
                         <tr key={firefighter.id} id={firefighter.id} onClick={ (e) => {this.showModal(e)}}>

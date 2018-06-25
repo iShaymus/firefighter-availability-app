@@ -1,10 +1,11 @@
 import React, { Component } from 'react';
+import ListUsers from './listUsers'
 
 class Admin extends Component {
   render() {
     return (
       <div className="container">
-        <h1>Admin Console</h1>
+        <ListUsers firefighters={this.props.firefighters}/>
       </div>
     );
   }
